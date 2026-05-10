@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>고기야 Kitchen RPG</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Bebas+Neue&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a26;--bg4:#222232;
+  --gold:#f0c040;--gold2:#ffd86e;--gold3:#c89020;
+  --red:#e84040;--green:#40c870;--blue:#4080f0;--purple:#a040f0;
+  --ivory:#f0ead8;--gray:#6a6a8a;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ivory);font-family:'Noto Sans KR',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* SPLASH */
+#splash{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .8s}
+#splash.gone{opacity:0;pointer-events:none}
+.sp-fire{font-size:64px;animation:bounce .9s infinite ease-in-out}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.sp-title{font-family:'Press Start 2P',monospace;font-size:clamp(13px,4vw,20px);color:var(--gold);text-align:center;line-height:1.7;text-shadow:0 0 24px rgba(240,192,64,.5)}
+.sp-sub{font-size:12px;color:var(--gray);letter-spacing:2px}
+.sp-bar-wrap{width:200px;height:8px;background:var(--bg3);border:1px solid var(--gold3);border-radius:4px;overflow:hidden}
+.sp-bar{height:100%;width:0;background:linear-gradient(90deg,var(--gold3),var(--gold2));transition:width 1.8s ease}
+.sp-hint{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--gold3);animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* STATUS BAR */
+#statusbar{position:sticky;top:0;z-index:80;background:rgba(10,10,15,.97);backdrop-filter:blur(20px);border-bottom:2px solid var(--gold3);padding:10px 14px}
+.sb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.sb-char{display:flex;align-items:center;gap:10px}
+.sb-avatar{width:42px;height:42px;border-radius:10px;border:2px solid var(--gold3);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:22px;position:relative;flex-shrink:0}
+.sb-lv{position:absolute;bottom:-4px;right:-4px;background:var(--gold);color:var(--bg);font-family:'Press Start 2P',monospace;font-size:6px;padding:2px 4px;border-radius:4px;font-weight:700}
+.sb-name{font-size:13px;font-weight:900;color:var(--gold2)}
+.sb-title{font-size:10px;color:var(--gold3);margin-top:1px}
+.sb-right{text-align:right}
+.sb-date{font-size:9px;color:var(--gray);margin-bottom:1px}
+.sb-xp{font-family:'Bebas Neue';font-size:22px;color:var(--gold);line-height:1}
+.sb-xp-lbl{font-size:9px;color:var(--gray)}
+.bars{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.bar-row{display:flex;align-items:center;gap:6px}
+.bar-ico{font-size:12px;width:16px;text-align:center}
+.bar-track{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;border:1px solid rgba(255,255,255,.06)}
+.bar-fill{height:100%;border-radius:4px;transition:width .5s ease}
+.hp-fill{background:linear-gradient(90deg,#a02020,var(--red))}
+.xp-fill{background:linear-gradient(90deg,var(--gold3),var(--gold2))}
+.bar-val{font-size:9px;color:var(--gray);min-width:40px;text-align:right;white-space:nowrap}
+
+/* NAV */
+#nav{background:var(--bg2);border-bottom:1px solid rgba(240,192,64,.15);display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:92px;z-index:70}
+#nav::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:9px 18px;gap:3px;cursor:pointer;user-select:none;font-size:10px;color:var(--gray);border-bottom:2px solid transparent;transition:all .2s}
+.tab .ti{font-size:17px}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+
+/* PAGES */
+#pages{min-height:100vh;padding-bottom:40px}
+.page{display:none}
+.page.on{display:block;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.wrap{max-width:640px;margin:0 auto;padding:16px}
+
+/* HOME */
+.quest-banner{background:linear-gradient(135deg,#1a1208,#0f0f1a);border:2px solid var(--gold3);border-radius:12px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden}
+.quest-banner::before{content:'⚔️';position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:52px;opacity:.12}
+.qb-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--gold3);letter-spacing:2px;margin-bottom:6px}
+.qb-title{font-size:18px;font-weight:900;color:var(--gold2);margin-bottom:3px}
+.qb-sub{font-size:11px;color:var(--gray);margin-bottom:12px}
+.qb-prog-row{display:flex;justify-content:space-between;font-size:10px;color:var(--gray);margin-bottom:4px}
+.qb-pct{color:var(--gold);font-weight:700}
+.qb-track{height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;border:1px solid rgba(240,192,64,.2)}
+.qb-fill{height:100%;background:linear-gradient(90deg,var(--gold3),var(--gold2));border-radius:5px;transition:width .6s ease;position:relative}
+.qb-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);animation:shim 2s infinite}
+@keyframes shim{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.sbox{background:var(--bg3);border:1px solid rgba(240,192,64,.15);border-radius:10px;padding:12px 8px;text-align:center}
+.sbox-ico{font-size:20px;margin-bottom:5px}
+.sbox-num{font-family:'Bebas Neue';font-size:26px;line-height:1}
+.sbox-lbl{font-size:9px;color:var(--gray);margin-top:3px}
+
+.ach-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none}
+.ach-strip::-webkit-scrollbar{display:none}
+.ach{flex-shrink:0;background:var(--bg3);border:1px solid rgba(240,192,64,.15);border-radius:10px;padding:10px 12px;text-align:center;min-width:76px}
+.ach.earned{border-color:var(--gold);background:rgba(240,192,64,.08)}
+.ach-ico{font-size:24px;margin-bottom:4px;filter:grayscale(1) opacity(.25)}
+.ach.earned .ach-ico{filter:none}
+.ach-nm{font-size:9px;color:var(--gray);line-height:1.3}
+.ach.earned .ach-nm{color:var(--gold2)}
+
+.pos-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.pqcard{background:var(--bg3);border:2px solid rgba(240,192,64,.15);border-radius:12px;padding:14px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden;user-select:none}
+.pqcard:active{transform:scale(.97)}
+.pqcard.done{border-color:var(--green)}
+.pqcard::before{content:'';position:absolute;bottom:-20px;right:-20px;width:70px;height:70px;border-radius:50%;background:rgba(240,192,64,.04)}
+.pq-ico{font-size:24px;margin-bottom:6px}
+.pq-nm{font-size:12px;font-weight:700;margin-bottom:2px}
+.pq-xp{font-size:10px;color:var(--gold3);margin-bottom:8px}
+.pq-bar{height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.pq-bar-f{height:100%;background:linear-gradient(90deg,var(--gold3),var(--gold2));border-radius:2px;transition:width .4s}
+.pq-pct{font-family:'Bebas Neue';font-size:16px;color:var(--gold);margin-top:4px}
+.pq-done{font-size:10px;color:var(--green);font-weight:700;margin-top:2px}
+
+/* SECTION HERO */
+.sec-hero{background:linear-gradient(135deg,#13100a,#0e0e1a);border:2px solid rgba(240,192,64,.2);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+.sh-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--gold3);letter-spacing:2px;margin-bottom:5px}
+.sh-name{font-size:17px;font-weight:900;margin-bottom:10px}
+.sh-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.sh-pct{font-family:'Bebas Neue';font-size:40px;color:var(--gold2);line-height:1}
+.sh-info{font-size:11px;color:var(--gray)}
+.sh-bar{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.sh-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold3),var(--gold2));border-radius:3px;transition:width .5s ease}
+
+/* CAT CARDS */
+.cat-grid{display:flex;flex-direction:column;gap:8px}
+.cat-card{background:var(--bg3);border:1px solid rgba(240,192,64,.15);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .18s;user-select:none}
+.cat-card:active{transform:scale(.98);border-color:var(--gold)}
+.cat-card.done{border-color:rgba(64,200,112,.4);background:rgba(64,200,112,.05)}
+.cc-ico{font-size:22px;flex-shrink:0}
+.cc-info{flex:1;min-width:0}
+.cc-name{font-size:13px;font-weight:700;margin-bottom:5px}
+.cc-row{display:flex;align-items:center;gap:8px}
+.cc-bar{flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.cc-bar-f{height:100%;background:linear-gradient(90deg,var(--gold3),var(--gold2));border-radius:3px;transition:width .4s}
+.cc-pct{font-family:'Bebas Neue';font-size:18px;color:var(--gold);min-width:38px;text-align:right;line-height:1}
+.cc-meta{font-size:10px;margin-top:3px}
+.cc-meta.xp{color:var(--gold3)}
+.cc-meta.done{color:var(--green);font-weight:700}
+.cc-arr{font-size:18px;color:var(--gray);flex-shrink:0}
+
+/* PANEL */
+#panel{position:fixed;inset:0;z-index:200;background:var(--bg);transform:translateX(100%);transition:transform .32s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+#panel.show{transform:none}
+.phdr{background:rgba(10,10,15,.98);backdrop-filter:blur(20px);border-bottom:2px solid var(--gold3);padding:0 16px;height:58px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.phdr-back{display:flex;align-items:center;gap:6px;color:var(--gold);font-size:13px;font-weight:700;cursor:pointer;padding:8px 0;user-select:none}
+.phdr-right{text-align:right}
+.phdr-cat{font-size:10px;color:var(--gray)}
+.phdr-pct{font-family:'Bebas Neue';font-size:26px;color:var(--gold2);line-height:1}
+
+.pbanner{background:linear-gradient(135deg,#13100a,#0e0e1a);border-bottom:2px solid rgba(240,192,64,.18);padding:18px 18px 14px;flex-shrink:0;position:relative;overflow:hidden}
+.pbanner::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(240,192,64,.08),transparent 70%)}
+.pb-qlabel{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--gold3);letter-spacing:2px;margin-bottom:6px}
+.pb-title{font-size:clamp(17px,4vw,23px);font-weight:900;color:var(--gold2);margin-bottom:2px}
+.pb-eye{font-size:11px;color:var(--gray);margin-bottom:12px}
+.pb-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.pb-pct{font-family:'Bebas Neue';font-size:56px;color:var(--gold2);line-height:1}
+.pb-right{text-align:right}
+.pb-count{font-size:11px;color:var(--gray);margin-bottom:3px}
+.pb-xp{font-size:12px;color:var(--gold3);font-weight:700}
+.pb-bar-wrap{height:8px;background:var(--bg4);border-radius:4px;overflow:hidden}
+.pb-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold3),var(--gold2));border-radius:4px;transition:width .5s ease}
+.pb-done{display:none;align-items:center;gap:8px;margin-top:10px;background:rgba(64,200,112,.1);border:1px solid rgba(64,200,112,.3);border-radius:8px;padding:8px 12px}
+.pb-done.show{display:flex}
+.pb-done-txt{font-size:12px;font-weight:700;color:var(--green)}
+
+.pbody{flex:1;overflow-y:auto;padding:14px;scrollbar-width:thin;scrollbar-color:var(--gold3) transparent}
+.pbody::-webkit-scrollbar{width:3px}
+.pbody::-webkit-scrollbar-thumb{background:var(--gold3);border-radius:3px}
+
+.sg-hdr{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--gold3);padding:14px 2px 7px;display:block;border-top:1px solid rgba(240,192,64,.12);letter-spacing:1px}
+.sg-hdr:first-child{border-top:none;padding-top:2px}
+
+/* CHECK ITEMS */
+.ck-list{display:flex;flex-direction:column;gap:7px}
+.ck{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--bg3);border:1px solid rgba(255,255,255,.06);border-radius:10px;cursor:pointer;transition:all .15s;user-select:none;position:relative}
+.ck:active{transform:scale(.99)}
+.ck.done{background:rgba(64,200,112,.08);border-color:rgba(64,200,112,.28)}
+.ck.warn{border-color:rgba(232,64,64,.22)}
+.ck-xp{position:absolute;top:8px;right:10px;font-family:'Press Start 2P',monospace;font-size:7px;color:var(--gold3);opacity:.55}
+.ck.done .ck-xp{color:var(--green);opacity:1}
+.ck-box{width:26px;height:26px;border-radius:7px;flex-shrink:0;border:2px solid rgba(240,192,64,.3);display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s;margin-top:1px}
+.ck.done .ck-box{background:var(--green);border-color:var(--green);color:#fff}
+.ck.warn .ck-box{border-color:rgba(232,64,64,.5)}
+.ck-body{flex:1;min-width:0;padding-right:48px}
+.ck-m{font-size:13.5px;color:var(--ivory);line-height:1.4;font-weight:600}
+.ck.done .ck-m{color:var(--gray);text-decoration:line-through}
+.ck-s{font-size:11px;color:var(--gray);margin-top:3px}
+.warn-tag{font-size:9px;color:var(--red);background:rgba(232,64,64,.1);border:1px solid rgba(232,64,64,.25);border-radius:10px;padding:1px 7px;margin-left:6px;vertical-align:middle}
+
+/* LEVEL UP */
+#lvup{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.88);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center}
+#lvup.show{display:flex;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.lu-box{background:linear-gradient(135deg,#1a1208,#0f0f1a);border:2px solid var(--gold);border-radius:20px;padding:32px 28px;text-align:center;max-width:320px;width:90%;animation:popIn .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes popIn{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+.lu-stars{font-size:36px;margin-bottom:12px}
+.lu-label{font-family:'Press Start 2P',monospace;font-size:10px;color:var(--gold3);letter-spacing:3px;margin-bottom:10px}
+.lu-lv{font-family:'Press Start 2P',monospace;font-size:clamp(26px,7vw,38px);color:var(--gold2);text-shadow:0 0 30px rgba(240,192,64,.5);margin-bottom:8px}
+.lu-title{font-size:16px;font-weight:900;color:var(--ivory);margin-bottom:5px}
+.lu-desc{font-size:12px;color:var(--gray);margin-bottom:18px;line-height:1.5}
+.lu-reward{background:rgba(240,192,64,.1);border:1px solid var(--gold3);border-radius:10px;padding:10px;margin-bottom:18px;font-size:12px;color:var(--gold2)}
+.lu-btn{background:linear-gradient(135deg,var(--gold3),var(--gold));color:var(--bg);font-weight:900;font-size:14px;padding:12px 32px;border:none;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;box-shadow:0 4px 20px rgba(240,192,64,.3)}
+.lu-btn:active{transform:scale(.97)}
+
+/* TOAST */
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:400;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:6px}
+.ti2{background:rgba(20,20,30,.95);border:1px solid var(--gold3);border-radius:20px;padding:8px 18px;font-size:12px;font-weight:700;color:var(--gold2);white-space:nowrap;animation:tin .3s ease, tout .3s ease 2s forwards}
+@keyframes tin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes tout{from{opacity:1}to{opacity:0;transform:translateY(-8px)}}
+
+/* LEADERBOARD */
+.lb-row{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg3);border:1px solid rgba(240,192,64,.12);border-radius:10px;margin-bottom:8px}
+.lb-rank{font-family:'Bebas Neue';font-size:22px;color:var(--gold3);min-width:28px}
+.lb-rank.g{color:var(--gold2);text-shadow:0 0 10px rgba(240,192,64,.4)}
+.lb-ico{font-size:20px}
+.lb-info{flex:1}
+.lb-name{font-size:13px;font-weight:700}
+.lb-sub{font-size:10px;color:var(--gold3)}
+.lb-val{font-family:'Bebas Neue';font-size:20px;color:var(--gold);text-align:right}
+
+/* PHOTO */
+.photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ph-c{background:var(--bg3);border:1px solid rgba(240,192,64,.12);border-radius:12px;overflow:hidden;cursor:pointer;transition:all .18s;user-select:none}
+.ph-c:active{transform:scale(.97);border-color:var(--gold)}
+.ph-thumb{height:88px;display:flex;align-items:center;justify-content:center;font-size:36px;background:var(--bg4);border-bottom:1px solid rgba(240,192,64,.08)}
+.ph-info{padding:10px 12px}
+.ph-num{font-size:9px;color:var(--gold3)}
+.ph-ttl{font-size:12px;font-weight:700;margin-top:2px}
+
+/* MODAL */
+#modal{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.88);backdrop-filter:blur(12px);display:none;align-items:flex-end;justify-content:center}
+#modal.show{display:flex}
+.mbox{background:var(--bg2);border:2px solid var(--gold3);border-radius:16px 16px 0 0;padding:24px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+.mhd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.mttl{font-size:16px;font-weight:900;color:var(--gold2)}
+.mx{font-size:22px;color:var(--gray);cursor:pointer;padding:4px}
+
+.btn-reset{width:100%;padding:12px;margin:12px 0 0;background:transparent;border:1px solid rgba(240,192,64,.2);border-radius:8px;color:var(--gray);font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .2s}
+.btn-reset:active{background:rgba(240,192,64,.1);color:var(--gold)}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--gold3);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="sp-fire">🔥</div>
+  <div class="sp-title">고기야<br>KITCHEN RPG</div>
+  <div class="sp-sub">업무 완료 = 레벨업!</div>
+  <div class="sp-bar-wrap"><div class="sp-bar" id="spBar"></div></div>
+  <div class="sp-hint">LOADING...</div>
+</div>
+
+<div id="statusbar">
+  <div class="sb-top">
+    <div class="sb-char">
+      <div class="sb-avatar" id="sbAv">🧑‍🍳<div class="sb-lv" id="sbLv">1</div></div>
+      <div>
+        <div class="sb-name" id="sbName">주방 견습생</div>
+        <div class="sb-title" id="sbTit">⚔️ LV.1 · 고기야 입문</div>
+      </div>
+    </div>
+    <div class="sb-right">
+      <div class="sb-date" id="sbDate"></div>
+      <div class="sb-xp" id="sbXP">0</div>
+      <div class="sb-xp-lbl">TOTAL XP</div>
+    </div>
+  </div>
+  <div class="bars">
+    <div class="bar-row">
+      <span class="bar-ico">❤️</span>
+      <div class="bar-track"><div class="bar-fill hp-fill" id="hpBar" style="width:0%"></div></div>
+      <span class="bar-val" id="hpVal">0/0 완료</span>
+    </div>
+    <div class="bar-row">
+      <span class="bar-ico">⭐</span>
+      <div class="bar-track"><div class="bar-fill xp-fill" id="xpBar" style="width:0%"></div></div>
+      <span class="bar-val" id="xpVal">LV2까지 0XP</span>
+    </div>
+  </div>
+</div>
+
+<nav id="nav">
+  <div class="tab on" data-p="home"><span class="ti">🏠</span>대시보드</div>
+  <div class="tab" data-p="pos"><span class="ti">👨‍🍳</span>포지션</div>
+  <div class="tab" data-p="tech"><span class="ti">📋</span>기본기</div>
+  <div class="tab" data-p="anal"><span class="ti">📊</span>분석</div>
+  <div class="tab" data-p="lb"><span class="ti">🏆</span>랭킹</div>
+  <div class="tab" data-p="photo"><span class="ti">📸</span>사진</div>
+</nav>
+
+<div id="pages">
+  <div class="page on" id="p-home">
+    <div class="wrap">
+      <div class="quest-banner">
+        <div class="qb-label">DAILY QUEST</div>
+        <div class="qb-title">🔥 오늘의 주방 미션</div>
+        <div class="qb-sub">모든 항목 완료 → 만렙 달성!</div>
+        <div class="qb-prog-row"><span id="qbInfo">0 / 0 항목</span><span class="qb-pct" id="qbPct">0%</span></div>
+        <div class="qb-track"><div class="qb-fill" id="qbFill" style="width:0%"></div></div>
+      </div>
+      <div class="stat-grid">
+        <div class="sbox"><div class="sbox-ico">⭐</div><div class="sbox-num" style="color:var(--gold)" id="stXP">0</div><div class="sbox-lbl">획득 XP</div></div>
+        <div class="sbox"><div class="sbox-ico">✅</div><div class="sbox-num" style="color:var(--green)" id="stDone">0</div><div class="sbox-lbl">완료 항목</div></div>
+        <div class="sbox"><div class="sbox-ico">🏅</div><div class="sbox-num" style="color:var(--purple)" id="stAch">0</div><div class="sbox-lbl">업적</div></div>
+      </div>
+      <div style="font-size:10px;letter-spacing:2px;color:var(--gold3);margin-bottom:10px">🏅 업적</div>
+      <div class="ach-strip" id="achStrip"></div>
+      <div style="font-size:10px;letter-spacing:2px;color:var(--gold3);margin-bottom:10px">⚔️ 포지션 퀘스트</div>
+      <div class="pos-grid" id="homePosGrid"></div>
+      <button class="btn-reset" onclick="if(confirm('새 게임 시작? (모든 기록이 초기화됩니다)')){doReset()}">🔄 새 게임 시작</button>
+    </div>
+  </div>
+  <div class="page" id="p-pos"><div class="wrap"><div style="font-size:10px;letter-spacing:2px;color:var(--gold3);margin-bottom:12px">⚔️ 포지션 선택</div><div class="pos-grid" id="posGrid"></div><div id="posCatArea"></div></div></div>
+  <div class="page" id="p-tech"><div class="wrap" id="techWrap"></div></div>
+  <div class="page" id="p-anal"><div class="wrap" id="analWrap"></div></div>
+  <div class="page" id="p-lb"><div class="wrap"><div style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--gold3);margin-bottom:14px">🏆 TODAY RANKING</div><div id="lbContent"></div></div></div>
+  <div class="page" id="p-photo"><div class="wrap"><div style="font-size:10px;letter-spacing:2px;color:var(--gold3);margin-bottom:12px">📸 매뉴얼 30컷</div><div class="photo-grid" id="photoGrid"></div></div></div>
+</div>
+
+<!-- QUEST PANEL -->
+<div id="panel">
+  <div class="phdr">
+    <div class="phdr-back" onclick="closePanel()">← 뒤로</div>
+    <div class="phdr-right">
+      <div class="phdr-cat">QUEST</div>
+      <div class="phdr-pct" id="phdrPct">0%</div>
+    </div>
+  </div>
+  <div class="pbanner">
+    <div class="pb-qlabel">QUEST</div>
+    <div class="pb-title" id="pbTitle">—</div>
+    <div class="pb-eye" id="pbEye">—</div>
+    <div class="pb-row">
+      <div class="pb-pct" id="pbPct">0%</div>
+      <div class="pb-right">
+        <div class="pb-count" id="pbCount">0 / 0 완료</div>
+        <div class="pb-xp" id="pbXP">⭐ 0 XP</div>
+      </div>
+    </div>
+    <div class="pb-bar-wrap"><div class="pb-bar-fill" id="pbBar" style="width:0%"></div></div>
+    <div class="pb-done" id="pbDone"><span style="font-size:18px">🎉</span><span class="pb-done-txt">퀘스트 완료! 100% 달성!</span></div>
+  </div>
+  <div class="pbody" id="pbody"></div>
+</div>
+
+<!-- LEVEL UP -->
+<div id="lvup">
+  <div class="lu-box">
+    <div class="lu-stars">⭐✨🌟</div>
+    <div class="lu-label">LEVEL UP!</div>
+    <div class="lu-lv" id="luLv">LV.2</div>
+    <div class="lu-title" id="luTitle">칭호 획득!</div>
+    <div class="lu-desc" id="luDesc">새로운 칭호를 얻었습니다</div>
+    <div class="lu-reward" id="luReward">🎁 칭호 획득</div>
+    <button class="lu-btn" onclick="closeLvUp()">계속 진행! →</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="modal"><div class="mbox"><div class="mhd"><div class="mttl" id="mttl"></div><div class="mx" onclick="closeModal()">✕</div></div><div id="mbody"></div></div></div>
+
+<script>
+/* ══════════════════════════════════════
+   RPG CONFIG
+══════════════════════════════════════ */
+const LEVELS=[
+  {lv:1, xp:0,    title:'🥄 주방 견습생',       avatar:'🧑‍🍳'},
+  {lv:2, xp:60,   title:'🔪 칼질 입문자',       avatar:'🧑‍🍳'},
+  {lv:3, xp:150,  title:'🥬 야채 담당',          avatar:'🧑‍🍳'},
+  {lv:4, xp:280,  title:'🔥 불판 수련생',        avatar:'👨‍🍳'},
+  {lv:5, xp:450,  title:'🥩 고기 전문가',        avatar:'👨‍🍳'},
+  {lv:6, xp:680,  title:'🍽️ 플레이팅 아티스트', avatar:'👨‍🍳'},
+  {lv:7, xp:960,  title:'📦 재고 마스터',        avatar:'👨‍🍳'},
+  {lv:8, xp:1280, title:'🧼 위생 챔피언',        avatar:'🧑‍🍳'},
+  {lv:9, xp:1650, title:'⚡ 피크타임 전사',       avatar:'👨‍🍳'},
+  {lv:10,xp:2060, title:'👑 주방장 (만렙)',       avatar:'👑'},
+];
+const ACHS=[
+  {id:'a1',icon:'🌱',name:'첫 발걸음', cond:s=>s.done>=1},
+  {id:'a2',icon:'⚡',name:'반환점',    cond:s=>s.pct>=50},
+  {id:'a3',icon:'🚀',name:'스피드런', cond:s=>s.done>=30},
+  {id:'a4',icon:'🧼',name:'위생왕',   cond:s=>s.hygOk},
+  {id:'a5',icon:'🥩',name:'고기마스터',cond:s=>s.meatOk},
+  {id:'a6',icon:'💯',name:'퍼펙트',   cond:s=>s.pct>=100},
+  {id:'a7',icon:'🏅',name:'LV.5 달성',cond:s=>s.lv>=5},
+  {id:'a8',icon:'👑',name:'만렙!',    cond:s=>s.lv>=10},
+];
+
+/* ══════════════════════════════════════
+   DATA — 단일 키 체계: scope_groupId_itemIndex
+   pos:  P_{posId}_{catId}_{idx}
+   tech: T_{catId}_{idx}
+   anal: A_{secId}_{idx}
+══════════════════════════════════════ */
+const mk=arr=>arr.map(([m,s])=>({m,s:s||'',xp:5}));
+const mw=arr=>arr.map(([m,s])=>({m,s:s||'',w:true,xp:10}));
+
+const POS=[
+  {id:'gogi',name:'고기다이',icon:'🥩'},
+  {id:'sk1', name:'시코미①', icon:'🔪'},
+  {id:'sk2', name:'시코미②', icon:'🫙'},
+  {id:'dish',name:'설거지',  icon:'🫧'},
+];
+
+const PCATS=[
+  {id:'recipe',icon:'📖',name:'레시피 기준',eye:'Recipe Standards',items:mk([
+    ['삼겹살 1인분 정량 150g','저울 측정 필수'],['갈비살 1인분 정량 150g','마블링 확인'],
+    ['양념삼겹살 양념 2큰술 기준','고르게 도포'],['양념갈비살 양념 비율 준수','냉장 숙성 확인'],
+    ['항정살 1인분 80g 슬라이스','두께 5mm'],['차돌박이 1인분 70g','냉동→냉장 해동'],
+    ['막창 1인분 150g 세척','내부 세척 철저'],['대창 1인분 100g 손질','기름 제거 완료'],
+    ['된장찌개 재료 정량 확인','두부 50g 기준'],['김치찌개 재료 정량 확인','묵은김치 사용'],
+    ['냉면 육수 300ml 기준','냉장 온도 유지'],['반찬 1종당 적정량 준수','소분 기준'],
+    ['쌈채소 6종 구성 확인','신선도 확인'],['소스 소분량 20ml 기준','밀봉 상태 확인'],
+    ['냉동육 해동 시간 준수','12시간 냉장 해동'],['숯불 착화 온도 기준','220℃ 이상'],
+    ['불판 예열 시간 3분 기준','표면 온도 확인'],['육즙 보존 조리 기준','강불→약불 순서'],
+    ['맛 기준 시식 체크','출고 전 확인'],['제공 온도 기준 확인','60℃ 이상'],
+  ])},
+  {id:'seq',icon:'⚡',name:'조리 순서',eye:'Cooking Sequence',items:mk([
+    ['재료 꺼내기 우선순위 결정','냉장→냉동 순'],['해동육 30분 전 꺼내기','실온 해동 금지'],
+    ['야채 손질 오픈 전 완료','세척·절단 완료'],['소스 소분 완료 확인','뚜껑 밀봉 체크'],
+    ['피크타임 30분 전 세팅','미리 준비'],['주문 즉시 세팅 시작','대기 2분 이내'],
+    ['불판 예열 후 고기 올리기','예열 확인 필수'],['반찬 선 세팅 기준','고기보다 먼저'],
+    ['된장찌개 타이밍 맞추기','고기와 동시 제공'],['동선 최소화 방식 적용','재료 가까이 배치'],
+    ['멀티태스킹 우선순위','주문량 기준 판단'],['긴급 주문 대응 프로세스','관리자 보고'],
+    ['재료 소진 전 미리 준비','잔량 30% 기준'],['포장 주문 별도 동선','홀과 분리'],
+    ['배달 주문 조리 우선순위','수령 시간 기준'],['음식 제공 타이밍 확인','테이블 확인 후'],
+    ['피크 후 정리 순서','재료→도구→바닥'],['남은 재료 보관 처리','날짜 라벨 부착'],
+    ['조리 도구 세척 순서','사용 직후 세척'],['마감 전 재고 파악','다음 날 준비'],
+  ])},
+  {id:'plate',icon:'🍽️',name:'플레이팅 기준',eye:'Plating Standards',items:mk([
+    ['삼겹살 세로 가지런히 담기','두께 일정하게'],['갈비살 뼈 방향 앞으로','통일감 유지'],
+    ['접시 중앙 정렬 기준','여백 1cm'],['소스 오른쪽 하단 배치','3g 이하'],
+    ['깻잎 고명 2장 기준','신선한 것'],['마늘 3알 왼쪽 배치','껍질 제거'],
+    ['야채 색감 대비 배치','초록·흰색 교차'],['접시 테두리 청결','행주로 마무리'],
+    ['뜨거운 접시 안전 확인','집게 사용 필수'],['양념육 소스 앞면 노출','고명 위치 통일'],
+    ['반찬 접시 크기 통일','소·대 기준'],['냉면 고명 중앙 배치','계란 반쪽'],
+    ['찌개 건더기 앞쪽 배치','국물 70% 기준'],['쌈채소 세워서 담기','물기 제거'],
+    ['뜨거운 메뉴=뜨거운 접시','온도 확인'],['색감 3색 기준 유지','단색 배치 금지'],
+    ['포장 쏟임 방지 처리','안정적으로 닫기'],['1인분 볼륨감 균일','양 편차 최소화'],
+    ['특수 메뉴 별도 기준','관리자 확인'],['최종 검수 후 제공','출고 전 2회 확인'],
+  ])},
+  {id:'job',icon:'📌',name:'주요 업무',eye:'Core Operations',subs:[
+    {label:'🌅 오픈',items:mk([
+      ['냉장·냉동 온도 확인','5℃ / -18℃'],['재고 수량 파악','어제 마감 대비'],
+      ['야채 신선도 점검','변질 즉시 폐기'],['소스 준비 완료','소분 및 밀봉'],
+      ['불판 청결 확인','잔여물 제거'],['조리 도구 세팅','포지션별'],
+      ['홀 세팅 완료','테이블별 확인'],['개인 위생 확인','손씻기·유니폼'],
+      ['오픈 전 시식 체크','맛 기준 확인'],['당일 특이사항 확인','메모 인수인계'],
+    ])},
+    {label:'🔥 피크타임',items:mk([
+      ['주문 속도 따라가기','최대 3분 이내'],['재료 소진 모니터링','잔량 20% 알림'],
+      ['포지션 간 소통','부족 시 즉시 지원'],['플레이팅 품질 유지','바쁠수록 기준'],
+      ['제공 속도 관리','홀 대기 최소화'],['포장 주문 관리','누락 방지 집중'],
+      ['안전 사고 예방','뛰지 않기'],['컴플레인 즉시 보고','혼자 처리 금지'],
+      ['쓰레기통 수시 비우기','넘치기 전에'],['체력·집중 유지','수시로 수분 보충'],
+    ])},
+    {label:'🌙 마감',items:mk([
+      ['남은 재료 날짜 라벨 부착','품목·날짜·양'],['냉장고 정리 정돈','선입선출 원칙'],
+      ['조리 도구 세척 완료','건조 보관'],['가스 밸브 잠금 확인','더블 체크'],
+      ['전기 장비 전원 OFF','리스트 확인'],['바닥 청소 완료','건식 후 습식'],
+      ['쓰레기 분리수거','냄새 나기 전'],['다음날 부족 재료 메모','발주 요청'],
+      ['마감 인수인계 작성','다음 근무자에게'],['개인 물품 정리','사물함 잠금'],
+    ])},
+    {label:'🚨 긴급',items:mk([
+      ['재료 부족 시 즉시 보고','관리자 연락'],['기계 고장 사용 중지','표시 후 보고'],
+      ['이물질 발견 조리 중단','전량 확인'],['화재 소화기 사용','대피 우선'],
+      ['부상 발생 즉시 보고','응급처치 후'],
+    ])},
+  ]},
+  {id:'veg',icon:'🥬',name:'야채 리스트',eye:'Vegetable Check',items:mk([
+    ['상추 손질·냉장 확인','3일'],['깻잎 손질·냉장 확인','3일'],
+    ['쑥갓 손질·냉장 확인','2일'],['적상추 냉장 확인','3일'],
+    ['청양고추 냉장 확인','5일'],['마늘 껍질제거 확인','7일'],
+    ['대파 손질 냉장 확인','5일'],['양파 상온 보관 확인','14일'],
+    ['콩나물 세척 냉장 확인','2일'],['두부 냉장 보관 확인','2일'],
+    ['김치 소분 냉장 확인','30일'],['깍두기 소분 냉장 확인','30일'],
+    ['파김치 냉장 확인','7일'],['고사리 냉장 확인','3일'],
+    ['시금치 세척 냉장 확인','2일'],['당근 손질 냉장 확인','7일'],
+    ['오이 손질 냉장 확인','3일'],['애호박 냉장 확인','4일'],
+    ['표고버섯 냉장 확인','4일'],['팽이버섯 냉장 확인','3일'],
+  ])},
+  {id:'meat',icon:'🥩',name:'고기 리스트',eye:'Meat Check',items:mk([
+    ['삼겹살 냉장 보관 확인','국내산 미숙성'],['갈비살 숙성 상태 확인','숙성3일'],
+    ['양념삼겹살 숙성 확인','양념 상태'],['양념갈비살 숙성 확인','양념 상태'],
+    ['항정살 냉장 확인','국내산'],['차돌박이 냉동 확인','국내산'],
+    ['막창 세척 완료 확인','냉동 보관'],['대창 손질 완료 확인','냉동 보관'],
+    ['돼지갈비 양념 확인','국내산'],['소갈비 냉동 확인','미국산 숙성5일'],
+  ])},
+  {id:'sauce',icon:'🫙',name:'소스 리스트',eye:'Sauce Check',items:mk([
+    ['참기름소금 제조일 확인','7일 냉장'],['쌈장 제조일 확인','5일 냉장'],
+    ['된장 유통기한 확인','30일 냉장'],['고추장 유통기한 확인','30일 냉장'],
+    ['양념장 제조일 확인','3일 냉장'],['간장소스 제조일 확인','7일 냉장'],
+    ['겨자소스 제조일 확인','7일 냉장'],['다진마늘 제조일 확인','3일 냉장'],
+    ['다진생강 제조일 확인','3일 냉장'],['육수 제조일 확인','2일 냉장'],
+    ['매실청 개봉일 확인','60일 냉장'],['들기름 개봉일 확인','14일 냉장'],
+    ['참깨 개봉일 확인','30일 상온'],['식초 개봉일 확인','60일 상온'],
+    ['설탕 개봉일 확인','60일 상온'],['소금 개봉일 확인','60일 상온'],
+    ['굴소스 개봉일 확인','30일 냉장'],['진간장 개봉일 확인','60일 상온'],
+    ['국간장 개봉일 확인','60일 상온'],['올리브오일 개봉일 확인','30일 상온'],
+  ])},
+  {id:'hyg',icon:'🧼',name:'위생 점검',eye:'Hygiene Check',items:mk([
+    ['30분마다 손 씻기','비누 30초'],['작업 변경 시 장갑 교체','색상 분류'],
+    ['칼·도마 색상 분리','색상 규정'],['냉장 온도 확인','5℃ 이하'],
+    ['작업대 수시 청소','젖은 행주 금지'],
+  ])},
+  {id:'warn',icon:'⚠️',name:'주의사항',eye:'Safety',items:mw([
+    ['🔥 화상 — 집게 사용 필수','맨손 금지'],
+    ['🔪 칼 — 도마 위에서만','절단 주의'],
+    ['💧 미끄럼 — 바닥 즉시 닦기','낙상 주의'],
+    ['🚫 교차오염 — 분리 철저','식중독 예방'],
+    ['🍳 뜨거운 용기 — 장갑 착용','화상 예방'],
+  ])},
+];
+
+const TCATS=[
+  {id:'t1',icon:'🕐',name:'출근 및 인수인계',eye:'Check-in',items:mk([['지각 시 즉시 연락','문자 or 전화'],['냉장고 온도 확인','5℃/-18℃'],['전체 재고 확인','장부 대조'],['전달사항 확인','메모 필독'],['부족 재료 체크','발주 여부'],['장비 상태 확인','이상 시 보고']])},
+  {id:'t2',icon:'🛡️',name:'안전 수칙',eye:'Safety',items:mk([['칼 사용 시 앞치마','손가락 보호'],['젖은 바닥 즉시 닦기','미끄럼 방지'],['긴소매 금지(불 근처)','화상 예방'],['위생장갑 착용','맨손 조리 금지'],['장비 OFF 확인','퇴근 전']])},
+  {id:'t3',icon:'🌙',name:'마감 SOP',eye:'Closing',items:mk([['재고 정리·라벨','선입선출'],['쓰레기 분리수거','냄새 전에'],['바닥 청소(건식→습식)','구석까지'],['냉장·냉동 정리','문 닫힘 확인'],['전기·가스 OFF','퇴근 전 최종']])},
+  {id:'t4',icon:'🚒',name:'화재·가스 SOP',eye:'Fire & Gas',items:mk([['가스 냄새→밸브 잠금','창문 개방'],['화재→대피 우선','소화기 사용 후'],['소화기 위치 숙지','매달 확인'],['긴급 연락처 숙지','관리자·소방서'],['분전함 위치 숙지','긴급 차단']])},
+  {id:'t5',icon:'👔',name:'유니폼·위생',eye:'Uniform',items:mk([['샤워·냄새 관리','향수 금지'],['면도·머리감기','용모 단정'],['모자·헤어네트 착용','노출 금지'],['앞치마 청결','얼룩 없음'],['위생장갑 착용','파손 없는 것'],['손톱·매니큐어 금지','청결 유지']])},
+  {id:'t6',icon:'🧹',name:'청결 기준',eye:'Cleanliness',items:mk([['바닥 청결 수시 확인','즉시 제거'],['냉장고 내부 청결','주 1회'],['작업대 즉시 닦기','행주 교체'],['쓰레기통 80% 비우기','넘치기 전'],['배수구 확인','주 2회']])},
+  {id:'t7',icon:'📢',name:'보고 체계',eye:'Reporting',items:mk([['관리자 즉시 보고','혼자 처리 금지'],['사진 촬영 후 전송','증거 보존'],['시간 정확히 기록','로그 작성'],['후속 조치 기록','처리 완료 확인']])},
+  {id:'t8',icon:'🌏',name:'다문화 기준',eye:'Multicultural',items:mk([['한국말 최대한 사용','모르면 사진'],['사진 업무 지시 활용','아이콘 탭'],['체크형 업무 지시','✅ 완료'],['짧은 문장 지시','단어 위주']])},
+  {id:'t9',icon:'📝',name:'보고 프로세스',eye:'Process',items:mk([['재고 부족→보고','재고장 작성'],['컴플레인→즉시 보고','사진+메모'],['기기 고장→보고','표시 후'],['직원 이슈→보고','공개 금지'],['특이사항→인수인계','다음 근무자']])},
+];
+
+const ASECS=[
+  {id:'a1',icon:'📣',name:'컴플레인 분석',eye:'Complaints',items:mk([['음식 누락 문제','빈도·원인 기록'],['맛 편차 문제','레시피 재확인'],['조리 시간 지연','동선 점검'],['포장 불량','재교육'],['이물질 발생','조리 중단·보고'],['재조리 요청','원인 기록'],['재방문 가능성','만족도 평가'],['개선 방안 기록','주간 검토']])},
+  {id:'a2',icon:'🔍',name:'누락 감지',eye:'Missing',items:mk([['된장찌개 누락?','주문서 대조'],['소스 누락?','동봉 체크'],['반찬 누락?','구성 확인'],['포장 용기 누락?','최종 확인'],['음료 누락?','주문서 대조'],['추가 주문 누락?','재확인'],['배달 누락?','배달앱 확인'],['영수증 누락?','출력 확인'],['테이블 전달 누락?','홀 확인'],['최종 검수 완료?','제공 직전']])},
+  {id:'a3',icon:'📦',name:'재고 예측',eye:'Inventory',items:mk([['삼겹살 예상 사용량','어제 대비'],['갈비살 예상 사용량','어제 대비'],['양념삼겹살 사용량','주말 반영'],['소스 부족 예상?','30% 기준'],['야채 부족 예상?','신선도 고려'],['냉동 재고 확인','해동 고려'],['포장 용기 부족?','배달량 기준'],['주말 대비 확보','금요일 기준'],['날씨 변수 반영','비→배달 증가'],['발주 필요 결정','관리자 보고']])},
+];
+
+const PHOTOS=[
+  {n:'01',e:'🥩',t:'삼겹살 정량 세팅'},{n:'02',e:'🔪',t:'갈비살 슬라이스 기준'},
+  {n:'03',e:'🫙',t:'양념 도포 방법'},{n:'04',e:'🍽️',t:'플레이팅 기준'},
+  {n:'05',e:'🧄',t:'마늘·파 배치 위치'},{n:'06',e:'🥬',t:'쌈채소 세팅'},
+  {n:'07',e:'🍲',t:'된장찌개 비율'},{n:'08',e:'🧊',t:'냉면 고명 플레이팅'},
+  {n:'09',e:'🫧',t:'불판 세척 기준'},{n:'10',e:'🌡️',t:'냉장 온도 확인법'},
+  {n:'11',e:'📦',t:'포장 용기 선택'},{n:'12',e:'🔒',t:'밀봉 방법'},
+  {n:'13',e:'🏷️',t:'스티커 부착 위치'},{n:'14',e:'🧤',t:'위생장갑 착용법'},
+  {n:'15',e:'🔥',t:'화상 예방 집게 사용'},{n:'16',e:'🧹',t:'바닥 청소 순서'},
+  {n:'17',e:'❄️',t:'냉동 재료 보관법'},{n:'18',e:'🏷️',t:'날짜 라벨 부착법'},
+  {n:'19',e:'🚒',t:'소화기 위치·사용법'},{n:'20',e:'⚡',t:'가스 밸브 잠금'},
+  {n:'21',e:'🫙',t:'소스 소분 기준'},{n:'22',e:'🥩',t:'고기 해동 방법'},
+  {n:'23',e:'🔪',t:'칼·도마 색상 분리'},{n:'24',e:'🫧',t:'손 씻기 30초'},
+  {n:'25',e:'🧂',t:'양념 계량 기준'},{n:'26',e:'🛒',t:'발주서 작성법'},
+  {n:'27',e:'📝',t:'인수인계 작성법'},{n:'28',e:'🌏',t:'다문화 아이콘'},
+  {n:'29',e:'📊',t:'컴플레인 기록법'},{n:'30',e:'✅',t:'마감 체크리스트'},
+];
+
+/* ══════════════════════════════════════
+   KEY BUILDERS — 완전 통일된 단일 방식
+   pos:  P_{posId}_{catId}_{globalIdx}
+   tech: T_{catId}_{idx}
+   anal: A_{secId}_{idx}
+══════════════════════════════════════ */
+// pos cat의 모든 아이템을 하나의 flat 배열로
+function flatItems(cat){
+  if(cat.items) return cat.items;
+  return cat.subs.flatMap(sg=>sg.items);
+}
+// pos 키
+const PK=(pid,catId,idx)=>`P_${pid}_${catId}_${idx}`;
+// tech 키
+const TK=(catId,idx)=>`T_${catId}_${idx}`;
+// anal 키
+const AK=(secId,idx)=>`A_${secId}_${idx}`;
+
+/* ══════════════════════════════════════
+   STATE
+══════════════════════════════════════ */
+let S={};
+let selPos=null;
+let curPanel=null; // {cntFn}
+let prevLv=1;
+const LS='gny_rpg2';
+function load(){try{S=JSON.parse(localStorage.getItem(LS)||'{}')}catch{S={}}}
+function save(){localStorage.setItem(LS,JSON.stringify(S))}
+
+/* ══════════════════════════════════════
+   COUNT FUNCTIONS
+══════════════════════════════════════ */
+function cntCat(pid,cat){
+  const items=flatItems(cat);
+  let d=0,xp=0;
+  items.forEach((item,i)=>{
+    if(S[PK(pid,cat.id,i)]){d++;xp+=item.xp||5;}
+  });
+  return{t:items.length,d,xp};
+}
+function cntPos(pid){
+  let t=0,d=0,xp=0;
+  PCATS.forEach(cat=>{const r=cntCat(pid,cat);t+=r.t;d+=r.d;xp+=r.xp;});
+  return{t,d,xp};
+}
+function cntTC(cat){
+  let d=0,xp=0;
+  cat.items.forEach((item,i)=>{if(S[TK(cat.id,i)]){d++;xp+=item.xp||5;}});
+  return{t:cat.items.length,d,xp};
+}
+function cntAS(sec){
+  let d=0,xp=0;
+  sec.items.forEach((item,i)=>{if(S[AK(sec.id,i)]){d++;xp+=item.xp||5;}});
+  return{t:sec.items.length,d,xp};
+}
+function cntAll(){
+  let t=0,d=0,xp=0;
+  POS.forEach(pos=>{const r=cntPos(pos.id);t+=r.t;d+=r.d;xp+=r.xp;});
+  TCATS.forEach(c=>{const r=cntTC(c);t+=r.t;d+=r.d;xp+=r.xp;});
+  ASECS.forEach(s=>{const r=cntAS(s);t+=r.t;d+=r.d;xp+=r.xp;});
+  return{t,d,xp};
+}
+const pct=(t,d)=>t?Math.round(d/t*100):0;
+
+/* ══════════════════════════════════════
+   RPG LOGIC
+══════════════════════════════════════ */
+function getLv(xp){let l=LEVELS[0];for(const v of LEVELS){if(xp>=v.xp)l=v;else break;}return l;}
+function getNextLv(xp){for(const v of LEVELS){if(v.xp>xp)return v;}return null;}
+function getStats(){
+  const{t,d,xp}=cntAll();
+  const p=pct(t,d);
+  const lv=getLv(xp);
+  // achievements
+  const hygCat=PCATS.find(c=>c.id==='hyg');
+  let hygOk=false;
+  if(hygCat){POS.forEach(pos=>{const r=cntCat(pos.id,hygCat);if(r.d===r.t&&r.t>0)hygOk=true;});}
+  const meatCat=PCATS.find(c=>c.id==='meat');
+  let meatOk=false;
+  if(meatCat){POS.forEach(pos=>{const r=cntCat(pos.id,meatCat);if(r.d===r.t&&r.t>0)meatOk=true;});}
+  const earned=ACHS.filter(a=>a.cond({done:d,pct:p,lv:lv.lv,hygOk,meatOk}));
+  return{t,d,xp,p,lv,next:getNextLv(xp),earned};
+}
+
+/* ══════════════════════════════════════
+   UPDATE ALL UI
+══════════════════════════════════════ */
+function updateAll(){
+  const st=getStats();
+  const{t,d,xp,p,lv,next,earned}=st;
+  // status bar
+  document.getElementById('sbAv').firstChild.textContent=lv.avatar;
+  document.getElementById('sbLv').textContent=lv.lv;
+  document.getElementById('sbName').textContent=lv.title;
+  document.getElementById('sbTit').textContent=`⚔️ LV.${lv.lv} · 고기야 키친`;
+  document.getElementById('sbXP').textContent=xp;
+  // hp = overall pct
+  document.getElementById('hpBar').style.width=p+'%';
+  document.getElementById('hpVal').textContent=`${d}/${t} 완료`;
+  // xp = to next level
+  const xpPct=next?Math.round((xp-lv.xp)/(next.xp-lv.xp)*100):100;
+  document.getElementById('xpBar').style.width=xpPct+'%';
+  document.getElementById('xpVal').textContent=next?`LV${lv.lv+1}까지 ${next.xp-xp}XP`:'MAX!';
+  // home
+  document.getElementById('qbInfo').textContent=`${d} / ${t} 항목`;
+  document.getElementById('qbPct').textContent=p+'%';
+  document.getElementById('qbFill').style.width=p+'%';
+  document.getElementById('stXP').textContent=xp;
+  document.getElementById('stDone').textContent=d;
+  document.getElementById('stAch').textContent=earned.length;
+  // achievements
+  document.getElementById('achStrip').innerHTML=ACHS.map(a=>{
+    const ok=earned.some(e=>e.id===a.id);
+    return `<div class="ach${ok?' earned':''}"><div class="ach-ico">${a.icon}</div><div class="ach-nm">${a.name}</div></div>`;
+  }).join('');
+  // pos home grid
+  document.getElementById('homePosGrid').innerHTML=POS.map(pos=>{
+    const{t,d,xp}=cntPos(pos.id);const p2=pct(t,d);
+    return `<div class="pqcard${p2===100?' done':''}" onclick="gotoTab('pos');selectPos('${pos.id}')">
+      <div class="pq-ico">${pos.icon}</div>
+      <div class="pq-nm">${pos.name}</div>
+      <div class="pq-xp">⭐ ${xp}XP 획득</div>
+      <div class="pq-bar"><div class="pq-bar-f" style="width:${p2}%"></div></div>
+      <div class="pq-pct">${p2}%</div>
+      ${p2===100?'<div class="pq-done">✅ 퀘스트 완료!</div>':''}
+    </div>`;
+  }).join('');
+  // leaderboard
+  renderLB();
+  // level up check
+  if(lv.lv>prevLv){prevLv=lv.lv;setTimeout(()=>showLvUp(lv),400);}
+}
+
+/* ══════════════════════════════════════
+   TOGGLE — 핵심 버그 수정 완료
+══════════════════════════════════════ */
+function toggleCk(e,key,xpVal){
+  e.stopPropagation();
+  S[key]=!S[key]; save();
+  // DOM update
+  const el=e.currentTarget;
+  const on=S[key];
+  el.classList.toggle('done',on);
+  el.querySelector('.ck-box').textContent=on?'✓':'';
+  if(on) showToast(`+${xpVal}XP 획득! ⭐`);
+  // panel progress
+  updatePanelProg();
+  // global
+  updateAll();
+  // refresh card badges in page
+  refreshCards();
+}
+
+/* ══════════════════════════════════════
+   PANEL OPEN/CLOSE
+══════════════════════════════════════ */
+function openPanel(title, eyebrow, bodyHtml, cntFn){
+  curPanel={cntFn};
+  document.getElementById('pbTitle').textContent=title;
+  document.getElementById('pbEye').textContent=eyebrow||'';
+  document.getElementById('pbody').innerHTML=bodyHtml;
+  updatePanelProg();
+  document.getElementById('panel').classList.add('show');
+  document.body.style.overflow='hidden';
+}
+function updatePanelProg(){
+  if(!curPanel)return;
+  const{t,d,xp}=curPanel.cntFn();
+  const p=pct(t,d);
+  document.getElementById('pbPct').textContent=p+'%';
+  document.getElementById('phdrPct').textContent=p+'%';
+  document.getElementById('pbCount').textContent=`${d} / ${t} 완료`;
+  document.getElementById('pbXP').textContent=`⭐ ${xp} XP`;
+  document.getElementById('pbBar').style.width=p+'%';
+  document.getElementById('pbDone').classList.toggle('show',p===100);
+}
+function closePanel(){
+  document.getElementById('panel').classList.remove('show');
+  document.body.style.overflow='';
+  curPanel=null;
+  refreshCards();
+  updateAll();
+}
+
+/* ══════════════════════════════════════
+   CHECK ITEM HTML — key 직접 전달, xp 직접
+══════════════════════════════════════ */
+function ckHtml(key,item){
+  const on=!!S[key];
+  return `<div class="ck${on?' done':''}${item.w?' warn':''}" onclick="toggleCk(event,'${key}',${item.xp||5})">
+    <div class="ck-xp">+${item.xp||5}XP</div>
+    <div class="ck-box">${on?'✓':''}</div>
+    <div class="ck-body">
+      <div class="ck-m">${item.m}${item.w?'<span class="warn-tag">주의</span>':''}</div>
+      ${item.s?`<div class="ck-s">${item.s}</div>`:''}
+    </div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════
+   BUILD PANEL BODY HTML
+══════════════════════════════════════ */
+function buildPosCatPanel(pid,cat){
+  let html='';
+  if(cat.items){
+    html=`<div class="ck-list">${cat.items.map((item,i)=>ckHtml(PK(pid,cat.id,i),item)).join('')}</div>`;
+  } else if(cat.subs){
+    let offset=0;
+    html=cat.subs.map(sg=>{
+      const sgHtml=`<span class="sg-hdr">${sg.label}</span>
+        <div class="ck-list">${sg.items.map((item,i)=>ckHtml(PK(pid,cat.id,offset+i),item)).join('')}</div>`;
+      offset+=sg.items.length;
+      return sgHtml;
+    }).join('');
+  }
+  return html;
+}
+function buildTechPanel(cat){
+  return `<div class="ck-list">${cat.items.map((item,i)=>ckHtml(TK(cat.id,i),item)).join('')}</div>`;
+}
+function buildAnalPanel(sec){
+  return `<div class="ck-list">${sec.items.map((item,i)=>ckHtml(AK(sec.id,i),item)).join('')}</div>`;
+}
+
+/* ══════════════════════════════════════
+   CAT CARD CLICK
+══════════════════════════════════════ */
+function catCardClick(scope,id1,id2){
+  // scope: 'pos','tech','anal'
+  if(scope==='pos'){
+    const pid=id1, catId=id2;
+    const cat=PCATS.find(c=>c.id===catId); if(!cat)return;
+    openPanel(cat.name, cat.eye||'', buildPosCatPanel(pid,cat), ()=>cntCat(pid,cat));
+  } else if(scope==='tech'){
+    const cat=TCATS.find(c=>c.id===id1); if(!cat)return;
+    openPanel(cat.name, cat.eye||'', buildTechPanel(cat), ()=>cntTC(cat));
+  } else if(scope==='anal'){
+    const sec=ASECS.find(s=>s.id===id1); if(!sec)return;
+    openPanel(sec.name, sec.eye||'', buildAnalPanel(sec), ()=>cntAS(sec));
+  }
+}
+
+/* ══════════════════════════════════════
+   CAT CARD HTML
+══════════════════════════════════════ */
+function catCard(scope,id1,id2,icon,name,t,d,xpTotal){
+  const p=pct(t,d); const done=p===100;
+  const cid=`${scope}_${id1}_${id2||''}`;
+  return `<div class="cat-card${done?' done':''}" data-cid="${cid}" onclick="catCardClick('${scope}','${id1}','${id2||''}')">
+    <div class="cc-ico">${icon}</div>
+    <div class="cc-info">
+      <div class="cc-name">${name}</div>
+      <div class="cc-row">
+        <div class="cc-bar"><div class="cc-bar-f" style="width:${p}%"></div></div>
+        <div class="cc-pct">${p}%</div>
+      </div>
+      <div class="cc-meta${done?' done':' xp'}">${done?`✅ 퀘스트 완료! +${xpTotal}XP`:`⭐ 최대 ${xpTotal}XP`}</div>
+    </div>
+    <div class="cc-arr">${done?'✅':'›'}</div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════
+   RENDER PAGES
+══════════════════════════════════════ */
+function renderPosGrid(){
+  document.getElementById('posGrid').innerHTML=POS.map(pos=>{
+    const{t,d}=cntPos(pos.id); const p=pct(t,d);
+    return `<div class="pqcard${p===100?' done':''}" onclick="selectPos('${pos.id}')">
+      <div class="pq-ico">${pos.icon}</div>
+      <div class="pq-nm">${pos.name}</div>
+      <div class="pq-pct">${p}%</div>
+      <div class="pq-bar"><div class="pq-bar-f" style="width:${p}%"></div></div>
+      ${p===100?'<div class="pq-done">✅ 완료!</div>':''}
+    </div>`;
+  }).join('');
+}
+
+function renderPosCats(pid){
+  if(!pid){document.getElementById('posCatArea').innerHTML='';return;}
+  const pos=POS.find(p=>p.id===pid);
+  let tT=0,tD=0,tX=0;
+  PCATS.forEach(cat=>{const r=cntCat(pid,cat);tT+=r.t;tD+=r.d;tX+=r.xp;});
+  let html=`<div class="sec-hero">
+    <div class="sh-label">POSITION QUEST</div>
+    <div class="sh-name">${pos.icon} ${pos.name}</div>
+    <div class="sh-row"><div class="sh-pct">${pct(tT,tD)}%</div><div class="sh-info">⭐${tX}XP · ${tD}/${tT}</div></div>
+    <div class="sh-bar"><div class="sh-bar-fill" style="width:${pct(tT,tD)}%"></div></div>
+  </div><div class="cat-grid">`;
+  PCATS.forEach(cat=>{
+    const r=cntCat(pid,cat);
+    const xMax=flatItems(cat).reduce((a,i)=>a+(i.xp||5),0);
+    html+=catCard('pos',pid,cat.id,cat.icon,cat.name,r.t,r.d,xMax);
+  });
+  html+='</div>';
+  document.getElementById('posCatArea').innerHTML=html;
+}
+
+function selectPos(pid){selPos=pid;renderPosGrid();renderPosCats(pid);}
+
+function renderTech(){
+  let tT=0,tD=0,tX=0;
+  TCATS.forEach(c=>{const r=cntTC(c);tT+=r.t;tD+=r.d;tX+=r.xp;});
+  let html=`<div class="sec-hero">
+    <div class="sh-label">SKILL QUEST</div>
+    <div class="sh-name">📋 기본 테크닉</div>
+    <div class="sh-row"><div class="sh-pct">${pct(tT,tD)}%</div><div class="sh-info">⭐${tX}XP · ${tD}/${tT}</div></div>
+    <div class="sh-bar"><div class="sh-bar-fill" style="width:${pct(tT,tD)}%"></div></div>
+  </div><div class="cat-grid">`;
+  TCATS.forEach(cat=>{
+    const r=cntTC(cat);
+    const xMax=cat.items.reduce((a,i)=>a+(i.xp||5),0);
+    html+=catCard('tech',cat.id,'',cat.icon,cat.name,r.t,r.d,xMax);
+  });
+  html+='</div>';
+  document.getElementById('techWrap').innerHTML=html;
+}
+
+function renderAnal(){
+  let tT=0,tD=0,tX=0;
+  ASECS.forEach(s=>{const r=cntAS(s);tT+=r.t;tD+=r.d;tX+=r.xp;});
+  let html=`<div class="sec-hero">
+    <div class="sh-label">ANALYSIS QUEST</div>
+    <div class="sh-name">📊 분석 시스템</div>
+    <div class="sh-row"><div class="sh-pct">${pct(tT,tD)}%</div><div class="sh-info">⭐${tX}XP · ${tD}/${tT}</div></div>
+    <div class="sh-bar"><div class="sh-bar-fill" style="width:${pct(tT,tD)}%"></div></div>
+  </div><div class="cat-grid">`;
+  ASECS.forEach(sec=>{
+    const r=cntAS(sec);
+    const xMax=sec.items.reduce((a,i)=>a+(i.xp||5),0);
+    html+=catCard('anal',sec.id,'',sec.icon,sec.name,r.t,r.d,xMax);
+  });
+  html+='</div>';
+  document.getElementById('analWrap').innerHTML=html;
+}
+
+function renderLB(){
+  const rows=POS.map(pos=>{const{t,d,xp}=cntPos(pos.id);return{pos,d,xp,p:pct(t,d)};}).sort((a,b)=>b.xp-a.xp);
+  document.getElementById('lbContent').innerHTML=rows.map((r,i)=>`
+    <div class="lb-row">
+      <div class="lb-rank${i===0?' g':''}">${i===0?'👑':i+1}</div>
+      <div class="lb-ico">${r.pos.icon}</div>
+      <div class="lb-info"><div class="lb-name">${r.pos.name}</div><div class="lb-sub">${r.p}% 완료</div></div>
+      <div class="lb-val">⭐${r.xp}</div>
+    </div>`).join('');
+}
+
+function renderPhotos(){
+  document.getElementById('photoGrid').innerHTML=PHOTOS.map(p=>`
+    <div class="ph-c" onclick="showModal('No.${p.n} ${p.t}','<div style=text-align:center;padding:20px;font-size:60px>${p.e}</div><div style=text-align:center;color:var(--gray);font-size:13px>현장 사진을 등록하세요</div>')">
+      <div class="ph-thumb">${p.e}</div>
+      <div class="ph-info"><div class="ph-num">NO. ${p.n}</div><div class="ph-ttl">${p.t}</div></div>
+    </div>`).join('');
+}
+
+/* refresh card badges after toggle */
+function refreshCards(){
+  document.querySelectorAll('[data-cid]').forEach(card=>{
+    const cid=card.dataset.cid;
+    const parts=cid.split('_');
+    let t=0,d=0,xp=0;
+    if(parts[0]==='pos'){
+      const pid=parts[1],catId=parts[2];
+      const cat=PCATS.find(c=>c.id===catId);
+      if(cat){const r=cntCat(pid,cat);t=r.t;d=r.d;xp=r.xp;}
+    } else if(parts[0]==='tech'){
+      const cat=TCATS.find(c=>c.id===parts[1]);
+      if(cat){const r=cntTC(cat);t=r.t;d=r.d;xp=r.xp;}
+    } else if(parts[0]==='anal'){
+      const sec=ASECS.find(s=>s.id===parts[1]);
+      if(sec){const r=cntAS(sec);t=r.t;d=r.d;xp=r.xp;}
+    }
+    const p=pct(t,d); const done=p===100;
+    const pctEl=card.querySelector('.cc-pct'); if(pctEl)pctEl.textContent=p+'%';
+    const barEl=card.querySelector('.cc-bar-f'); if(barEl)barEl.style.width=p+'%';
+    const metaEl=card.querySelector('.cc-meta');
+    if(metaEl){
+      metaEl.textContent=done?`✅ 퀘스트 완료! +${xp}XP`:`⭐ 최대 ${xp}XP`;
+      metaEl.className='cc-meta '+(done?'done':'xp');
+    }
+    const arrEl=card.querySelector('.cc-arr'); if(arrEl)arrEl.textContent=done?'✅':'›';
+    card.classList.toggle('done',done);
+  });
+}
+
+/* ══════════════════════════════════════
+   LEVEL UP POPUP
+══════════════════════════════════════ */
+function showLvUp(lv){
+  document.getElementById('luLv').textContent='LV.'+lv.lv;
+  document.getElementById('luTitle').textContent=lv.title;
+  document.getElementById('luDesc').textContent='새로운 칭호를 획득했습니다!';
+  document.getElementById('luReward').textContent='🎁 칭호: '+lv.title;
+  document.getElementById('lvup').classList.add('show');
+}
+function closeLvUp(){document.getElementById('lvup').classList.remove('show');}
+
+/* TOAST */
+function showToast(msg){
+  const t=document.createElement('div');
+  t.className='ti2'; t.textContent=msg;
+  document.getElementById('toast').appendChild(t);
+  setTimeout(()=>t.remove(),2600);
+}
+
+/* NAV */
+const TABS=['home','pos','tech','anal','lb','photo'];
+function gotoTab(pid){
+  TABS.forEach(p=>{document.getElementById('p-'+p).classList.toggle('on',p===pid);});
+  document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('on',el.dataset.p===pid));
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.tab').forEach(el=>el.addEventListener('click',()=>gotoTab(el.dataset.p)));
+
+/* MODAL */
+const modal=document.getElementById('modal');
+modal.addEventListener('click',e=>{if(e.target===modal)closeModal();});
+function showModal(title,body){document.getElementById('mttl').textContent=title;document.getElementById('mbody').innerHTML=body;modal.classList.add('show');}
+function closeModal(){modal.classList.remove('show');}
+
+/* RESET */
+function doReset(){S={};prevLv=1;save();init();}
+
+/* DATE */
+function setDate(){
+  const d=new Date(),w=['일','월','화','수','목','금','토'];
+  document.getElementById('sbDate').textContent=`${d.getMonth()+1}월 ${d.getDate()}일 (${w[d.getDay()]})`;
+}
+
+/* INIT */
+function init(){
+  load(); setDate();
+  const st=getStats(); prevLv=st.lv.lv;
+  renderPosGrid(); renderPosCats(selPos);
+  renderTech(); renderAnal(); renderPhotos();
+  updateAll();
+}
+init();
+
+setTimeout(()=>document.getElementById('spBar').style.width='100%',80);
+setTimeout(()=>document.getElementById('splash').classList.add('gone'),2100);
+setTimeout(()=>document.getElementById('splash').style.display='none',3000);
+</script>
+</body>
+</html>
